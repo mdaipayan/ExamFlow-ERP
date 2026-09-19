@@ -53,7 +53,7 @@ def list_students(
 def get_student(
     student_id: UUID,
     claims: dict = Depends(require_roles(
-        "SUPER_ADMIN", "COE", "TC", "SCRUTINIZER", "DATA_ENTRY", "FACULTY", "STUDENT"
+        "SUPER_ADMIN", "COE", "TC", "SCRUTINIZER", "DATA_ENTRY", "FACULTY"
     )),
     db: Session = Depends(get_db),
 ):
@@ -68,9 +68,6 @@ def get_student(
     ).mappings().first()
     if row is None:
         raise HTTPException(status_code=404, detail="Student not found.")
-    if "STUDENT" in claims.get("roles", []) and str(row["id"]) != str(claims["sub"]):
-        # Student self-service mapping is intentionally not enabled yet.
-        raise HTTPException(status_code=403, detail="Student self-service is not configured yet.")
     return dict(row)
 
 
