@@ -8,6 +8,7 @@ def test_foundation_routes_registered():
     assert "/api/setup/initialize" in paths
     assert "/api/auth/login" in paths
     assert "/api/auth/me" in paths
+    assert "/api/dashboard" in paths
     assert "/api/academic/programmes" in paths
     assert "/api/academic/courses" in paths
     assert "/api/academic/regulations" in paths
