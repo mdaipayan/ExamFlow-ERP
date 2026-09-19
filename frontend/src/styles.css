@@ -309,3 +309,125 @@ h1 { margin-bottom: 28px; font-size: 30px; }
   .topbar { flex-direction: column; }
   h1 { margin-bottom: 20px; }
 }
+
+
+/* Dashboard data */
+
+.dashboard-loading {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 56px 24px;
+  color: #788297;
+}
+
+.dashboard-loading .spinner {
+  margin: 0;
+}
+
+.dashboard-error {
+  margin-top: 4px;
+}
+
+.dashboard-error p {
+  margin-bottom: 18px;
+}
+
+.inline-notice {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid #e6d8b0;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #6f5a20;
+  font-size: 13px;
+}
+
+.card small {
+  display: block;
+  margin-top: 7px;
+  color: #8a94a8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.card.attention {
+  border-color: #e6d8b0;
+  background: #fffdf7;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.refreshing {
+  color: #8a94a8;
+  font-size: 12px;
+}
+
+.workflow-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.workflow-current {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #f5f7fb;
+}
+
+.workflow-current span,
+.workflow-stats span {
+  color: #7a8498;
+  font-size: 12px;
+}
+
+.workflow-current strong {
+  font-size: 17px;
+}
+
+.workflow-current small {
+  color: #8a94a8;
+}
+
+.workflow-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.workflow-stats > div {
+  padding: 16px;
+  border: 1px solid #e7ebf2;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.workflow-stats strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 20px;
+}
+
+@media (max-width: 900px) {
+  .workflow-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workflow-stats {
+    grid-template-columns: 1fr;
+  }
+}
