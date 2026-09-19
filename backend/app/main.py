@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .academic_router import router as academic_router
+from .examination_router import router as examination_router
 from .auth_router import router as auth_router
 from .settings import settings
 from .setup_router import router as setup_router
@@ -21,6 +22,7 @@ app.include_router(setup_router)
 app.include_router(auth_router)
 app.include_router(academic_router)
 app.include_router(student_router)
+app.include_router(examination_router)
 
 
 @app.get("/api/health")
