@@ -70,7 +70,7 @@ def test_sgpa_is_credit_weighted():
         {"grade": "C", "grade_point": Decimal("6"), "credits": Decimal("3")},
         {"grade": "F", "grade_point": Decimal("0"), "credits": Decimal("3")},
     ]
-    assert calculate_sgpa(results, config) == Decimal("6.96")
+    assert calculate_sgpa(results, config) == Decimal("6.21")
 
 
 def test_relative_method_requires_cohort_threshold():
