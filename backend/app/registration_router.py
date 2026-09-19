@@ -59,24 +59,24 @@ def register_students(
 
     student_ids = list(dict.fromkeys(payload.student_ids))
 
-    valid_students = db.execute(
+    eligible_rows = db.execute(
         text("""
-            SELECT s.id
+            SELECT DISTINCT s.id
             FROM students s
             JOIN student_programme_enrolments spe ON spe.student_id = s.id
             WHERE s.institution_id = :institution_id
               AND spe.programme_id = :programme_id
-              AND s.id = ANY(:student_ids)
-            GROUP BY s.id
         """),
         {
             "institution_id": institution_id,
             "programme_id": exam["programme_id"],
-            "student_ids": student_ids,
         },
     ).scalars().all()
 
-    valid_set = {UUID(str(student_id)) for student_id in valid_students}
+    eligible_set = {UUID(str(student_id)) for student_id in eligible_rows}
+    valid_students = [student_id for student_id in student_ids if student_id in eligible_set]
+
+    valid_set = set(valid_students)
     invalid = [str(student_id) for student_id in student_ids if student_id not in valid_set]
     if invalid:
         raise HTTPException(
