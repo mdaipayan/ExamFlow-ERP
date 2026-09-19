@@ -92,6 +92,12 @@ def calculate_trial_result(
         )
 
     config = exam["parameters"] or {}
+    pass_grades = config.get("result", {}).get("pass_grades")
+    non_counting_grades = config.get("sgpa", {}).get("non_counting_grades")
+    if not isinstance(pass_grades, list) or not pass_grades:
+        raise HTTPException(status_code=422, detail="Required academic parameter is missing: result.pass_grades")
+    if not isinstance(non_counting_grades, list):
+        raise HTTPException(status_code=422, detail="Required academic parameter is missing: sgpa.non_counting_grades")
 
     courses = db.execute(
         text("""
@@ -281,7 +287,7 @@ def calculate_trial_result(
                     "grade": item["grade"],
                     "grade_point": item["grade_point"],
                     "credits": item["credits"],
-                    "status": "PASS" if item["grade"] in set(config.get("sgpa", {}).get("included_grades", [])) else "NOT_COUNTED",
+                    "status": "PASS" if item["grade"] in set(pass_grades) else "FAIL",
                     "notation": None,
                     "explanation": json.dumps(explanation, default=str),
                 },
@@ -312,8 +318,8 @@ def calculate_trial_result(
                 Decimal("0"),
             )
             failed = any(
-                row["grade"] not in set(config.get("sgpa", {}).get("included_grades", []))
-                and row["grade"] not in set(config.get("sgpa", {}).get("non_counting_grades", []))
+                row["grade"] not in set(pass_grades)
+                and row["grade"] not in set(non_counting_grades)
                 for row in all_rows
             )
             db.execute(
