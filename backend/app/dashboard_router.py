@@ -106,13 +106,22 @@ def get_dashboard(
 
     exam_id = current["id"]
 
+    active_examinations = db.execute(
+        text(
+            """
+            SELECT COUNT(*)
+            FROM examinations
+            WHERE institution_id = :institution_id
+              AND status IN ('DRAFT','IN_PROGRESS','TRIAL','UNDER_REVIEW','APPROVED')
+            """
+        ),
+        {"institution_id": institution_id},
+    ).scalar_one()
+
     metrics = db.execute(
         text(
             """
             SELECT
-                COUNT(DISTINCT e.id) FILTER (
-                    WHERE e.status IN ('DRAFT','IN_PROGRESS','TRIAL','UNDER_REVIEW','APPROVED')
-                ) AS active_examinations,
                 COUNT(DISTINCT er.student_id) AS registered_students,
                 COUNT(DISTINCT me.id) AS marks_recorded,
                 COUNT(DISTINCT mvi.id) FILTER (
@@ -211,7 +220,7 @@ def get_dashboard(
             "semester_number": current["semester_number"],
         },
         "metrics": {
-            "active_examinations": int(metrics["active_examinations"] or 0),
+            "active_examinations": int(active_examinations or 0),
             "registered_students": int(metrics["registered_students"] or 0),
             "marks_recorded": int(metrics["marks_recorded"] or 0),
             "validation_errors": int(metrics["validation_errors"] or 0),
