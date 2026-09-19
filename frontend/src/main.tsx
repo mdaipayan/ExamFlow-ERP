@@ -4,6 +4,7 @@ import { getDashboard } from "./api/dashboard";
 import { ApiError } from "./api/client";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import type { DashboardData } from "./types/dashboard";
+import { StudentManagement } from "./StudentManagement";
 import "./styles.css";
 
 const navItems = [
@@ -338,6 +339,8 @@ function AppShell() {
 
         {active === "Dashboard" ? (
           <Dashboard onNavigate={setActive} />
+        ) : active === "Students" ? (
+          <StudentManagement onBackToDashboard={() => setActive("Dashboard")} />
         ) : (
           <section className="panel empty">
             <h2>{active}</h2>
