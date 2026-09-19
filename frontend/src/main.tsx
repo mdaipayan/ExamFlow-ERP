@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { getDashboard } from "./api/dashboard";
 import { ApiError } from "./api/client";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import type { DashboardData } from "./types/dashboard";
 import "./styles.css";
 
 const navItems = [
@@ -13,6 +15,15 @@ const navItems = [
   "Reports",
   "Administration",
 ];
+
+const actionToModule: Record<string, string> = {
+  CREATE_EXAMINATION: "Examinations",
+  OPEN_EXAMINATION: "Examinations",
+  OPEN_MARKS: "Marks & Results",
+  OPEN_RESULTS: "Marks & Results",
+  OPEN_SCRUTINY: "Marks & Results",
+  OPEN_REPORTS: "Reports",
+};
 
 function LoginScreen() {
   const { login } = useAuth();
@@ -90,15 +101,188 @@ function LoginScreen() {
   );
 }
 
-function LoadingScreen() {
+function LoadingScreen({ message = "Checking your session..." }: { message?: string }) {
   return (
     <div className="auth-page">
       <div className="loading-card">
         <div className="brand auth-brand">ExamFlow <span>ERP</span></div>
         <div className="spinner" aria-hidden="true" />
-        <p>Checking your session...</p>
+        <p>{message}</p>
       </div>
     </div>
+  );
+}
+
+function Dashboard({
+  onNavigate,
+}: {
+  onNavigate: (module: string) => void;
+}) {
+  const { session, logout } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function loadDashboard() {
+    if (!session) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await getDashboard(session.accessToken);
+      setData(result);
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) {
+        logout();
+        return;
+      }
+      setError(cause instanceof ApiError ? cause.message : "Unable to load dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [session?.accessToken]);
+
+  if (loading && !data) {
+    return (
+      <section className="dashboard-loading">
+        <div className="spinner" aria-hidden="true" />
+        <p>Loading examination office data...</p>
+      </section>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <section className="panel dashboard-error">
+        <h2>Dashboard unavailable</h2>
+        <p>{error}</p>
+        <button type="button" className="secondary-button" onClick={() => void loadDashboard()}>
+          Try again
+        </button>
+      </section>
+    );
+  }
+
+  const metrics = data?.metrics;
+  const current = data?.current_examination;
+  const workflow = data?.workflow;
+  const issues = (metrics?.validation_errors ?? 0) + (metrics?.validation_warnings ?? 0);
+
+  const welcomeContext = current
+    ? current.programme_code + " · Semester " + current.semester_number + " · " + current.term_label
+    : "There is no active examination yet.";
+
+  return (
+    <>
+      <section className="welcome">
+        <div>
+          <p className="eyebrow">
+            {data?.institution.name ?? "Examination Office"}
+          </p>
+          <h2>What do you need to do now?</h2>
+          <p>{welcomeContext}</p>
+        </div>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => onNavigate(actionToModule[workflow?.action ?? ""] ?? "Examinations")}
+        >
+          {workflow?.label ?? "Create examination"}
+        </button>
+      </section>
+
+      {error ? (
+        <div className="inline-notice" role="status">
+          {error}
+        </div>
+      ) : null}
+
+      <section className="stats">
+        <div className="card">
+          <span>Current Examination</span>
+          <strong>{current?.name ?? "Not created yet"}</strong>
+          <small>{current?.status ?? "SETUP"}</small>
+        </div>
+        <div className="card">
+          <span>Marks Recorded</span>
+          <strong>{metrics?.marks_recorded.toLocaleString() ?? "0"}</strong>
+          <small>{metrics?.registered_students.toLocaleString() ?? "0"} registered students</small>
+        </div>
+        <div className={issues > 0 ? "card attention" : "card"}>
+          <span>Issues Need Attention</span>
+          <strong>{issues.toLocaleString()}</strong>
+          <small>
+            {(metrics?.validation_errors ?? 0).toLocaleString()} errors ·{" "}
+            {(metrics?.validation_warnings ?? 0).toLocaleString()} warnings
+          </small>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h3>Current workflow</h3>
+            <p>Follow the examination process without hunting through technical screens.</p>
+          </div>
+          {loading ? <span className="refreshing">Refreshing…</span> : null}
+        </div>
+
+        <div className="workflow-strip">
+          <div className="workflow-current">
+            <span>Next action</span>
+            <strong>{workflow?.label ?? "Create examination"}</strong>
+            {current ? (
+              <small>{current.name} · {current.status}</small>
+            ) : (
+              <small>Set up your first examination.</small>
+            )}
+          </div>
+
+          <div className="workflow-stats">
+            <div>
+              <span>Active examinations</span>
+              <strong>{metrics?.active_examinations.toLocaleString() ?? "0"}</strong>
+            </div>
+            <div>
+              <span>Pending review</span>
+              <strong>{metrics?.pending_result_review.toLocaleString() ?? "0"}</strong>
+            </div>
+            <div>
+              <span>Pending approval</span>
+              <strong>{metrics?.pending_result_approval.toLocaleString() ?? "0"}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h3>Quick actions</h3>
+            <p>Common tasks for the examination office.</p>
+          </div>
+        </div>
+        <div className="actions">
+          <button className="action" type="button" onClick={() => onNavigate("Examinations")}>
+            Create Examination
+          </button>
+          <button className="action" type="button" onClick={() => onNavigate("Students")}>
+            Upload Students
+          </button>
+          <button className="action" type="button" onClick={() => onNavigate("Marks & Results")}>
+            Upload Marks
+          </button>
+          <button className="action" type="button" onClick={() => onNavigate("Marks & Results")}>
+            Review Results
+          </button>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -153,44 +337,7 @@ function AppShell() {
         </header>
 
         {active === "Dashboard" ? (
-          <>
-            <section className="welcome">
-              <div>
-                <h2>What do you need to do now?</h2>
-                <p>Continue the current examination workflow from where you stopped.</p>
-              </div>
-              <button type="button" className="primary">Continue</button>
-            </section>
-
-            <section className="stats">
-              <div className="card">
-                <span>Active Examination</span>
-                <strong>Not created yet</strong>
-              </div>
-              <div className="card">
-                <span>Marks awaiting check</span>
-                <strong>0</strong>
-              </div>
-              <div className="card">
-                <span>Issues need attention</span>
-                <strong>0</strong>
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h3>Quick actions</h3>
-                  <p>Common tasks for the examination office.</p>
-                </div>
-              </div>
-              <div className="actions">
-                {["Create Examination", "Upload Students", "Upload Marks", "Review Results"].map((label) => (
-                  <button className="action" type="button" key={label}>{label}</button>
-                ))}
-              </div>
-            </section>
-          </>
+          <Dashboard onNavigate={setActive} />
         ) : (
           <section className="panel empty">
             <h2>{active}</h2>
