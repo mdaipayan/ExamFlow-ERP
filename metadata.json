@@ -1,0 +1,8 @@
+{
+  "name": "ExamFlow ERP",
+  "description": "Simple examination management system for universities and institutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
