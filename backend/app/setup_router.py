@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/setup", tags=["setup"])
 
 
 @router.get("/status")
-def setup_status(db: Session = __import__("fastapi").Depends(get_db)):
+def setup_status(db: Session = Depends(get_db)):
     count = db.execute(text("SELECT count(*) FROM users")).scalar_one()
     return {"initialized": count > 0}
 
