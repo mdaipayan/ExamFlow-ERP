@@ -8,6 +8,8 @@ from .settings import settings
 from .setup_router import router as setup_router
 from .student_router import router as student_router
 from .registration_router import router as registration_router
+from .result_router import router as result_router
+
 
 app = FastAPI(title="ExamFlow ERP API", version="0.1.0")
 
@@ -25,6 +27,7 @@ app.include_router(academic_router)
 app.include_router(student_router)
 app.include_router(examination_router)
 app.include_router(registration_router)
+app.include_router(result_router)
 
 
 @app.get("/api/health")
