@@ -285,9 +285,9 @@ def create_regulation_version(
     row = db.execute(
         text("""
             INSERT INTO regulation_versions
-                (regulation_id, version_label, status, effective_from, effective_to, parameters)
+                (regulation_id, version_label, status, effective_from, effective_to, parameters, created_by)
             VALUES
-                (:regulation_id, :version_label, 'DRAFT', :effective_from, :effective_to, CAST(:parameters AS jsonb))
+                (:regulation_id, :version_label, 'DRAFT', :effective_from, :effective_to, CAST(:parameters AS jsonb), :created_by)
             RETURNING id, regulation_id, version_label, status, effective_from, effective_to, parameters
         """),
         {
@@ -320,3 +320,74 @@ def list_regulation_versions(
         {"regulation_id": regulation_id, "institution_id": institution_id},
     ).mappings().all()
     return [dict(row) for row in rows]
+
+
+@router.post("/regulations/{regulation_id}/versions/{version_id}/approve")
+def approve_regulation_version(
+    regulation_id: UUID,
+    version_id: UUID,
+    claims: dict = Depends(require_roles("COE")),
+    db: Session = Depends(get_db),
+):
+    institution_id = institution_id_from_claims(claims)
+    approver_id = UUID(str(claims["sub"]))
+
+    row = db.execute(
+        text("""
+            SELECT rv.id, rv.status, rv.created_by
+            FROM regulation_versions rv
+            JOIN regulations r ON r.id = rv.regulation_id
+            WHERE rv.id = :version_id
+              AND rv.regulation_id = :regulation_id
+              AND r.institution_id = :institution_id
+        """),
+        {
+            "version_id": version_id,
+            "regulation_id": regulation_id,
+            "institution_id": institution_id,
+        },
+    ).mappings().first()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Regulation version not found.")
+    if row["status"] != "DRAFT":
+        raise HTTPException(status_code=409, detail="Only Draft regulation versions can be approved.")
+    if row["created_by"] is None:
+        raise HTTPException(status_code=409, detail="This regulation version has no recorded proposer and cannot be approved.")
+    if row["created_by"] == approver_id:
+        raise HTTPException(status_code=403, detail="The person who created the regulation version cannot approve it.")
+
+    try:
+        approved = db.execute(
+            text("""
+                UPDATE regulation_versions
+                SET status = 'APPROVED',
+                    approved_by = :approved_by,
+                    approved_at = now()
+                WHERE id = :version_id
+                RETURNING id, regulation_id, version_label, status, approved_by, approved_at
+            """),
+            {"version_id": version_id, "approved_by": approver_id},
+        ).mappings().one()
+
+        db.execute(
+            text("""
+                INSERT INTO audit_events
+                    (institution_id, actor_user_id, action, entity_type, entity_id, reason, after_state)
+                VALUES
+                    (:institution_id, :actor_user_id, 'REGULATION_VERSION_APPROVED',
+                     'regulation_version', :entity_id, 'Regulation version approval', CAST(:after_state AS jsonb))
+            """),
+            {
+                "institution_id": institution_id,
+                "actor_user_id": approver_id,
+                "entity_id": version_id,
+                "after_state": __import__("json").dumps(dict(approved), default=str),
+            },
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not approve the regulation version.") from exc
+
+    return dict(approved)
